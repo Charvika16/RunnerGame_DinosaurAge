@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace DinosaurRunner.CameraSystem
 {
@@ -10,8 +10,8 @@ namespace DinosaurRunner.CameraSystem
     {
         [Header("Target & Offsets")]
         [SerializeField] private Transform target;
-        [SerializeField] private Vector3 offset = new Vector3(0f, 4.5f, -7.5f);
-        [SerializeField] private Vector3 lookAheadOffset = new Vector3(0f, 1.2f, 8f);
+        [SerializeField] private Vector3 offset = new Vector3(0f, 3.2f, -5.2f);
+        [SerializeField] private Vector3 lookAheadOffset = new Vector3(0f, 0.4f, 5.0f);
 
         [Header("Follow Dynamics")]
         [SerializeField] private float smoothSpeedX = 6f;
@@ -76,8 +76,8 @@ namespace DinosaurRunner.CameraSystem
 
             transform.position = desiredPosition;
 
-            // Look ahead along running path
-            Vector3 lookTarget = new Vector3(currentX, 1.2f, target.position.z) + lookAheadOffset;
+            // Look ahead along running path at character height
+            Vector3 lookTarget = new Vector3(currentX, 1.0f, target.position.z) + lookAheadOffset;
             transform.LookAt(lookTarget);
         }
 

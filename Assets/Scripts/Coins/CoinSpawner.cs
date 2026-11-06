@@ -45,36 +45,32 @@ namespace DinosaurRunner.Coins
             }
         }
 
-        public void SpawnPattern(float startZ, int patternType = -1)
+        public void SpawnPattern(float startZ, int preferredLane = -1, int patternType = -1)
         {
             if (patternType < 0)
-                patternType = Random.Range(0, 4);
+                patternType = Random.Range(0, 3);
 
-            int lane = Random.Range(0, 3);
+            int lane = (preferredLane >= 0 && preferredLane < 3) ? preferredLane : Random.Range(0, 3);
             float xPos = (lane - 1) * laneDistance;
 
             switch (patternType)
             {
-                case 0: // Straight Line of 5 coins
+                case 0: // Straight Line of 5 coins down the safe lane
                     SpawnStraightLine(xPos, startZ, 5);
                     break;
 
-                case 1: // Jump Arc (parabola for jumping)
-                    SpawnJumpArc(xPos, startZ, 5);
+                case 1: // 4 coins down safe lane with clean spacing
+                    SpawnStraightLine(xPos, startZ, 4);
                     break;
 
-                case 2: // Diagonal across lanes
-                    SpawnDiagonal(startZ);
-                    break;
-
-                case 3: // Coin cluster or Power-up
+                case 2: // Power-up or 5 coins
                     if (Random.value < powerupSpawnChance)
                     {
-                        SpawnPowerup(xPos, startZ + 3f);
+                        SpawnPowerup(xPos, startZ + 2f);
                     }
                     else
                     {
-                        SpawnStraightLine(xPos, startZ, 4);
+                        SpawnStraightLine(xPos, startZ, 5);
                     }
                     break;
             }
@@ -85,20 +81,17 @@ namespace DinosaurRunner.Coins
             for (int i = 0; i < count; i++)
             {
                 // Ground level coins right in the player's path
-                Vector3 pos = new Vector3(x, 0.85f, startZ + i * 1.8f);
+                Vector3 pos = new Vector3(x, 0.85f, startZ + i * 2.0f);
                 SpawnCoin(pos, CollectibleType.Coin);
             }
         }
 
         private void SpawnJumpArc(float x, float startZ, int count)
         {
-            float spacing = 1.8f;
+            // Keep coins down on the path as requested by user
             for (int i = 0; i < count; i++)
             {
-                float t = (float)i / (count - 1); // 0 to 1
-                // Gentle jump arc peaking at reachable 1.85m
-                float arcHeight = 0.85f + 4.0f * t * (1.0f - t) * 1.0f;
-                Vector3 pos = new Vector3(x, arcHeight, startZ + i * spacing);
+                Vector3 pos = new Vector3(x, 0.85f, startZ + i * 2.0f);
                 SpawnCoin(pos, CollectibleType.Coin);
             }
         }

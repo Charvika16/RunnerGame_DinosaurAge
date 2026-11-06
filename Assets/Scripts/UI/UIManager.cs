@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -242,16 +242,21 @@ namespace DinosaurRunner.UI
             int coins = ScoreManager.Instance != null ? ScoreManager.Instance.CoinsThisRun : 0;
 
             // HUD Badges
-            GUI.Box(new Rect(20, 20, 220, 95), GUIContent.none);
-            GUI.Label(new Rect(30, 25, 200, 40), $"SCORE: {score}", guiLabelStyle);
-            GUI.Label(new Rect(30, 65, 200, 40), $"COINS: {coins}", guiLabelStyle);
+            GUI.Box(new Rect(20, 20, 240, 130), GUIContent.none);
+            GUI.Label(new Rect(30, 25, 220, 35), $"SCORE: {score}m", guiLabelStyle);
+            GUI.Label(new Rect(30, 60, 220, 35), $"COINS: {coins}", guiLabelStyle);
 
             if (playerController != null)
             {
+                string hearts = new string('♥', Mathf.Max(0, playerController.CurrentLives));
+                GUI.Label(new Rect(30, 95, 220, 35), $"LIVES: {hearts}", guiLabelStyle);
+
+                if (playerController.IsInvincible)
+                    GUI.Label(new Rect(280, 25, 200, 30), "RECOVERING...", guiLabelStyle);
                 if (playerController.HasShield)
-                    GUI.Label(new Rect(250, 25, 200, 30), "SHIELD ACTIVE", guiLabelStyle);
+                    GUI.Label(new Rect(280, 60, 200, 30), "SHIELD ACTIVE", guiLabelStyle);
                 if (playerController.HasMagnet)
-                    GUI.Label(new Rect(250, 60, 200, 30), "MAGNET ACTIVE", guiLabelStyle);
+                    GUI.Label(new Rect(280, 95, 200, 30), "MAGNET ACTIVE", guiLabelStyle);
             }
 
             // Pause Button top right

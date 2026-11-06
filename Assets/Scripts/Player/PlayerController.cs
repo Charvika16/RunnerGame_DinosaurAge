@@ -20,16 +20,20 @@ namespace DinosaurRunner.Player
         [SerializeField] private float speedIncreaseRate = 0.12f;
 
         [Header("Jump Physics")]
-        [SerializeField] private float jumpForce = 9.5f;
-        [SerializeField] private float gravity = 28f;
+        [SerializeField] private float jumpForce = 11.0f;
+        [SerializeField] private float gravity = 24f;
         [SerializeField] private float fastFallMultiplier = 1.8f;
 
         [Header("Slide Settings")]
-        [SerializeField] private float slideDuration = 0.8f;
+        [SerializeField] private float slideDuration = 0.9f;
         [SerializeField] private float normalHeight = 1.8f;
         [SerializeField] private float normalCenterY = 0.9f;
         [SerializeField] private float slideHeight = 0.7f;
         [SerializeField] private float slideCenterY = 0.35f;
+
+        [Header("Lives & Health")]
+        [SerializeField] private int maxLives = 3;
+        [SerializeField] private float invincibilityDuration = 2.0f;
 
         [Header("Magnet Power-up")]
         [SerializeField] private float magnetRadius = 12f;
@@ -44,6 +48,8 @@ namespace DinosaurRunner.Player
         public bool IsGrounded => characterController.isGrounded || transform.position.y <= 0.05f;
         public bool IsSliding { get; private set; }
         public bool IsDead { get; private set; }
+        public int CurrentLives { get; private set; } = 3;
+        public bool IsInvincible => invincibilityTimer > 0f;
         public bool HasShield => shieldTimer > 0f;
         public bool HasMagnet => magnetTimer > 0f;
         public float MagnetRadius => magnetRadius;
@@ -57,6 +63,7 @@ namespace DinosaurRunner.Player
         private float targetX;
         private float shieldTimer;
         private float magnetTimer;
+        private float invincibilityTimer;
         private float footstepTimer;
 
         private void Awake()
@@ -71,6 +78,38 @@ namespace DinosaurRunner.Player
             {
                 characterController.height = normalHeight;
                 characterController.center = new Vector3(0, normalCenterY, 0);
+            }
+
+            EnsureHumanRunnerVisual();
+        }
+
+        private void Start()
+        {
+            EnsureHumanRunnerVisual();
+        }
+
+        private void EnsureHumanRunnerVisual()
+        {
+            // Deactivate any old broken empty fallback models
+            Transform oldCharModel = transform.Find("CharacterModel");
+            if (oldCharModel != null)
+            {
+                var renderers = oldCharModel.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length == 0)
+                {
+                    oldCharModel.gameObject.SetActive(false);
+                }
+            }
+
+            HumanRunnerModel humanModel = GetComponentInChildren<HumanRunnerModel>();
+            if (humanModel == null)
+            {
+                GameObject visualRoot = new GameObject("HumanRunnerCharacter");
+                visualRoot.transform.SetParent(transform);
+                visualRoot.transform.localPosition = Vector3.zero;
+                visualRoot.transform.localRotation = Quaternion.identity;
+                visualRoot.transform.localScale = Vector3.one;
+                visualRoot.AddComponent<HumanRunnerModel>();
             }
         }
 
@@ -249,6 +288,11 @@ namespace DinosaurRunner.Player
                 if (magnetVisual != null)
                     magnetVisual.SetActive(magnetTimer > 0f);
             }
+
+            if (invincibilityTimer > 0f)
+            {
+                invincibilityTimer -= Time.deltaTime;
+            }
         }
 
         private void UpdateFootsteps()
@@ -280,6 +324,34 @@ namespace DinosaurRunner.Player
             AudioManager.Instance?.PlayPowerupSFX();
         }
 
+        public void TakeDamage()
+        {
+            if (IsDead || IsInvincible)
+                return;
+
+            if (HasShield)
+            {
+                shieldTimer = 0f;
+                if (shieldVisual != null) shieldVisual.SetActive(false);
+                AudioManager.Instance?.PlayImpactSFX();
+                invincibilityTimer = 1.2f;
+                return;
+            }
+
+            CurrentLives--;
+            AudioManager.Instance?.PlayImpactSFX();
+
+            if (CurrentLives <= 0)
+            {
+                Die();
+            }
+            else
+            {
+                invincibilityTimer = invincibilityDuration;
+                verticalVelocity = 4.0f; // Small recovery bounce
+            }
+        }
+
         public void Die()
         {
             if (IsDead)
@@ -300,12 +372,16 @@ namespace DinosaurRunner.Player
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
-            if (IsDead)
+            if (IsDead || IsInvincible)
                 return;
 
             Obstacles.ObstacleController obstacle = hit.gameObject.GetComponent<Obstacles.ObstacleController>();
-            if (obstacle != null)
+            if (obstacle != null && !obstacle.IsSmashed)
             {
+                // If player is laterally separated by more than 1.1m, they are in an adjacent lane
+                if (Mathf.Abs(transform.position.x - obstacle.transform.position.x) > 1.1f)
+                    return;
+
                 if (HasShield)
                 {
                     // Smash obstacle
@@ -314,7 +390,20 @@ namespace DinosaurRunner.Player
                 }
                 else
                 {
-                    Die();
+                    bool avoided = false;
+                    if (obstacle.Type == Obstacles.ObstacleType.LowObstacle)
+                    {
+                        avoided = !IsGrounded || transform.position.y > 0.35f;
+                    }
+                    else if (obstacle.Type == Obstacles.ObstacleType.HighObstacle)
+                    {
+                        avoided = IsSliding;
+                    }
+
+                    if (!avoided)
+                    {
+                        TakeDamage();
+                    }
                 }
             }
         }
@@ -328,6 +417,8 @@ namespace DinosaurRunner.Player
             verticalVelocity = 0f;
             shieldTimer = 0f;
             magnetTimer = 0f;
+            invincibilityTimer = 0f;
+            CurrentLives = maxLives;
             if (shieldVisual != null) shieldVisual.SetActive(false);
             if (magnetVisual != null) magnetVisual.SetActive(false);
 

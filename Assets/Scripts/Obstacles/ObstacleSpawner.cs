@@ -58,37 +58,27 @@ namespace DinosaurRunner.Obstacles
         }
 
         /// <summary>
-        /// Spawns a fair obstacle pattern at specified Z coordinate.
+        /// Spawns a fair single-lane obstacle and returns a guaranteed safe free lane for coins.
         /// </summary>
-        public void SpawnPattern(float zPosition, float difficultyRatio)
+        public int SpawnPattern(float zPosition, float difficultyRatio)
         {
-            // Choose pattern complexity based on difficulty:
-            // 0: single obstacle
-            // 1: two-lane obstacle (1 free lane)
-            // 2: mixed jump + slide combination
-            int pattern = Random.Range(0, difficultyRatio > 0.4f ? 3 : 2);
+            // Pick obstacle lane
+            int obstLane = Random.Range(0, 3);
+            int safeLane = (obstLane + Random.Range(1, 3)) % 3; // Guaranteed different lane!
 
-            int freeLane = Random.Range(0, 3);
+            float xPos = (obstLane - 1) * laneDistance;
+            ObstacleType type = (ObstacleType)Random.Range(0, 3);
+            SpawnObstacle(type, new Vector3(xPos, 0f, zPosition));
 
-            for (int lane = 0; lane < 3; lane++)
+            // Only at higher difficulty (> 400m), occasionally place a jumpable log in another lane
+            if (difficultyRatio > 0.5f && Random.value < 0.4f)
             {
-                if (lane == freeLane && pattern < 2)
-                    continue; // Keep at least one lane completely open
-
-                float xPos = (lane - 1) * laneDistance;
-
-                if (lane == freeLane && pattern == 2)
-                {
-                    // For complex pattern, put a jumpable obstacle in the "escape" lane
-                    SpawnObstacle(ObstacleType.LowObstacle, new Vector3(xPos, 0f, zPosition));
-                }
-                else
-                {
-                    // Pick obstacle type for other lanes
-                    ObstacleType type = (ObstacleType)Random.Range(0, 3);
-                    SpawnObstacle(type, new Vector3(xPos, 0f, zPosition));
-                }
+                int secondLane = 3 - obstLane - safeLane; // The third lane
+                float xPos2 = (secondLane - 1) * laneDistance;
+                SpawnObstacle(ObstacleType.LowObstacle, new Vector3(xPos2, 0f, zPosition));
             }
+
+            return safeLane;
         }
 
         private void SpawnObstacle(ObstacleType type, Vector3 position)

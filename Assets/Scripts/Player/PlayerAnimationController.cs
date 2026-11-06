@@ -53,6 +53,23 @@ namespace DinosaurRunner.Player
             targetModelScale = originalModelScale;
 
             CacheParameters();
+            FindModelTransform();
+        }
+
+        private void Start()
+        {
+            FindModelTransform();
+        }
+
+        private void FindModelTransform()
+        {
+            HumanRunnerModel human = GetComponentInChildren<HumanRunnerModel>();
+            if (human != null)
+            {
+                modelTransform = human.transform;
+                originalModelScale = modelTransform.localScale;
+                targetModelScale = originalModelScale;
+            }
         }
 
         private void CacheParameters()

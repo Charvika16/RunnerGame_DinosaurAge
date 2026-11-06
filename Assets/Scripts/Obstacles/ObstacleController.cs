@@ -29,12 +29,23 @@ namespace DinosaurRunner.Obstacles
                 obstacleCollider = GetComponent<Collider>();
             if (visualModel == null && transform.childCount > 0)
                 visualModel = transform.GetChild(0).gameObject;
+
+            EnsureCollidersAreTriggers();
+        }
+
+        private void EnsureCollidersAreTriggers()
+        {
+            foreach (var c in GetComponentsInChildren<Collider>())
+            {
+                c.isTrigger = true;
+            }
         }
 
         public void Setup(ObstacleType type)
         {
             obstacleType = type;
             ResetObstacle();
+            EnsureCollidersAreTriggers();
         }
 
         public void Smash()
@@ -70,6 +81,10 @@ namespace DinosaurRunner.Obstacles
             Player.PlayerController player = other.GetComponent<Player.PlayerController>();
             if (player != null && !player.IsDead)
             {
+                // If player is more than 1.1m away laterally, they are safely in another lane!
+                if (Mathf.Abs(player.transform.position.x - transform.position.x) > 1.1f)
+                    return;
+
                 if (player.HasShield)
                 {
                     Smash();
@@ -81,8 +96,8 @@ namespace DinosaurRunner.Obstacles
 
                     if (obstacleType == ObstacleType.LowObstacle)
                     {
-                        // Avoided if player is jumping high enough
-                        avoided = !player.IsGrounded && player.transform.position.y > 1.25f;
+                        // Avoided if player is jumping in the air
+                        avoided = !player.IsGrounded || player.transform.position.y > 0.35f;
                     }
                     else if (obstacleType == ObstacleType.HighObstacle)
                     {
@@ -92,7 +107,7 @@ namespace DinosaurRunner.Obstacles
 
                     if (!avoided)
                     {
-                        player.Die();
+                        player.TakeDamage();
                     }
                 }
             }

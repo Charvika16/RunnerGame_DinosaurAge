@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using DinosaurRunner.Obstacles;
 using DinosaurRunner.Coins;
@@ -122,18 +122,20 @@ namespace DinosaurRunner.Environment
             {
                 float difficultyRatio = Mathf.Clamp01((currentSpawnZ - startPlayerZ) / 800f);
 
-                // Spawn obstacles
+                int safeLane = -1;
+
+                // Spawn obstacles (returns a guaranteed free safe lane)
                 if (obstacleSpawner != null && Random.value < 0.75f)
                 {
                     float obstZ = currentSpawnZ + Random.Range(6f, segmentLength - 6f);
-                    obstacleSpawner.SpawnPattern(obstZ, difficultyRatio);
+                    safeLane = obstacleSpawner.SpawnPattern(obstZ, difficultyRatio);
                 }
 
-                // Spawn coins
-                if (coinSpawner != null && Random.value < 0.85f)
+                // Spawn coins strictly in the safe, unblocked lane down the path
+                if (coinSpawner != null && Random.value < 0.9f)
                 {
                     float coinZ = currentSpawnZ + Random.Range(2f, segmentLength - 12f);
-                    coinSpawner.SpawnPattern(coinZ);
+                    coinSpawner.SpawnPattern(coinZ, safeLane);
                 }
             }
 

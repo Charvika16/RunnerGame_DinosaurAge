@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using DinosaurRunner.Audio;
 
 namespace DinosaurRunner.Coins
@@ -33,15 +33,93 @@ namespace DinosaurRunner.Coins
         private Transform playerTransform;
         private Player.PlayerController playerController;
 
+        private static Material sharedCoinMat;
+        private static Material sharedMagnetMat;
+        private static Material sharedShieldMat;
+
         private void Awake()
         {
-            if (visualModel == null && transform.childCount > 0)
-                visualModel = transform.GetChild(0).gameObject;
+            EnsureCleanVisualModel();
         }
 
         private void Start()
         {
             FindPlayer();
+            EnsureCleanVisualModel();
+        }
+
+        private void EnsureCleanVisualModel()
+        {
+            // Deactivate any old broken FBX child model that had a 2m vertical offset
+            Transform oldModel = transform.Find("CoinModel");
+            if (oldModel != null)
+            {
+                oldModel.gameObject.SetActive(false);
+            }
+
+            Transform existingDisc = transform.Find("CoinDisc");
+            if (existingDisc != null)
+            {
+                visualModel = existingDisc.gameObject;
+                return;
+            }
+
+            if (visualModel == null || visualModel.name != "CoinDisc")
+            {
+                // Create a clean, centered, gold coin cylinder
+                GameObject coinDisc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                coinDisc.name = "CoinDisc";
+                coinDisc.transform.SetParent(transform);
+                coinDisc.transform.localPosition = Vector3.zero;
+                // Rotate 90 around X so flat face faces along the road
+                coinDisc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                coinDisc.transform.localScale = new Vector3(0.7f, 0.07f, 0.7f);
+
+                Collider discCol = coinDisc.GetComponent<Collider>();
+                if (discCol != null)
+                {
+                    if (Application.isPlaying) Destroy(discCol);
+                    else DestroyImmediate(discCol);
+                }
+
+                if (sharedCoinMat == null)
+                {
+                    Shader s = Shader.Find("Universal Render Pipeline/Lit");
+                    if (s == null) s = Shader.Find("Standard");
+
+                    sharedCoinMat = new Material(s);
+                    sharedCoinMat.SetColor("_BaseColor", new Color(1.0f, 0.82f, 0.05f));
+                    sharedCoinMat.SetFloat("_Metallic", 0.95f);
+                    sharedCoinMat.SetFloat("_Smoothness", 0.9f);
+
+                    sharedMagnetMat = new Material(s);
+                    sharedMagnetMat.SetColor("_BaseColor", new Color(1.0f, 0.35f, 0.05f));
+                    sharedMagnetMat.SetFloat("_Metallic", 0.7f);
+                    sharedMagnetMat.SetFloat("_Smoothness", 0.8f);
+
+                    sharedShieldMat = new Material(s);
+                    sharedShieldMat.SetColor("_BaseColor", new Color(0.1f, 0.85f, 1.0f));
+                    sharedShieldMat.SetFloat("_Metallic", 0.5f);
+                    sharedShieldMat.SetFloat("_Smoothness", 0.85f);
+                }
+
+                coinDisc.GetComponent<Renderer>().sharedMaterial = GetMaterialForType(collectibleType);
+                visualModel = coinDisc;
+            }
+
+            // Ensure root collider is a clean trigger
+            SphereCollider sc = GetComponent<SphereCollider>();
+            if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
+            sc.isTrigger = true;
+            sc.radius = 0.65f;
+            sc.center = Vector3.zero;
+        }
+
+        private Material GetMaterialForType(CollectibleType type)
+        {
+            if (type == CollectibleType.Magnet) return sharedMagnetMat ?? sharedCoinMat;
+            if (type == CollectibleType.Shield) return sharedShieldMat ?? sharedCoinMat;
+            return sharedCoinMat;
         }
 
         private void FindPlayer()
